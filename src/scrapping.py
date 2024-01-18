@@ -30,8 +30,24 @@ def parse_image_urls(content, classes, location, source):
 
 
 def save_urls_to_csv(image_urls):
-   df = pd.DataFrame({"links": image_urls})
-   df.to_csv("links.csv", index=False, encoding="utf-8")
+    csv_file_path = "links.csv"
+
+    if os.path.exists(csv_file_path):
+        # If the CSV file already exists, read the existing data
+        df_existing = pd.read_csv(csv_file_path)
+        existing_urls = set(df_existing["links"])
+
+        # Append new unique URLs to the existing data
+        new_urls = [url for url in image_urls if url not in existing_urls]
+        df_new = pd.DataFrame({"links": new_urls})
+        df_updated = pd.concat([df_existing, df_new], ignore_index=True).drop_duplicates()
+
+        # Save the updated data back to the same file
+        df_updated.to_csv(csv_file_path, index=False, encoding="utf-8")
+    else:
+        # If the CSV file doesn't exist, create a new one
+        df = pd.DataFrame({"links": image_urls})
+        df.to_csv(csv_file_path, index=False, encoding="utf-8")
 
 
 def get_and_save_image_to_file(image_url, output_dir):
@@ -58,15 +74,17 @@ def get_and_save_image_to_file(image_url, output_dir):
 
 
 def scrapp():
-   url = "https://www.etsy.com/fr/search?q=painting+in+living+room&page=2&ref=pagination"
-   content = get_content_from_url(url)
-   image_urls = parse_image_urls(
-       content=content, classes="v2-listing-card__img wt-position-relative", location="img", source="src",
-   )
-   save_urls_to_csv(image_urls)
-
-   for image_url in image_urls:
-       get_and_save_image_to_file(
-           image_url, output_dir=Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "images/")),
+    for i in range(1,20):
+       url = f"https://www.etsy.com/fr/search?q=painting+in+living+room&page={i}&ref=pagination"
+       print(f"Scraping URL: {url}")
+       content = get_content_from_url(url)
+       image_urls = parse_image_urls(
+           content=content, classes="v2-listing-card__img wt-position-relative", location="img", source="src",
        )
+       save_urls_to_csv(image_urls)
+
+       for image_url in image_urls:
+           get_and_save_image_to_file(
+               image_url, output_dir=Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "images/")),
+           )
 
